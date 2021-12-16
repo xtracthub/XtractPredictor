@@ -94,7 +94,7 @@ Similar to extract sampler, except we're simplifying so that it only trains does
 def train_extract_predictor(results_file, model_param_dict, classifier='rf',
                             feature='head', model_name=None, head_bytes=0, 
                             rand_bytes=0, split=0.8, label_csv=None, dirname=None,
-                            predict_file=None, csv_outfile='naivetruth.csv'):
+                            csv_outfile='naivetruth.csv'):
 
     if classifier not in ["svc", "logit", "rf"]:
         print("Invalid classifier option %s" % classifier)
@@ -178,5 +178,5 @@ if __name__ == '__main__':
     
     mdata = train_extract_predictor(classifier=args.classifier, feature=args.feature, model_name=args.model_name,
                                     head_bytes=args.head_bytes, rand_bytes=args.rand_bytes, split=args.split, 
-                                    csv_outfile=args.label_csv, dirname=args.dirname, predict_file=args.predict_file,
+                                    csv_outfile=args.label_csv, dirname=args.dirname, 
                                     results_file=args.results_file, model_param_dict=model_param_dict)
