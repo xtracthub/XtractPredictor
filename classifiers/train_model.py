@@ -5,7 +5,6 @@ from sklearn.svm import SVC, NuSVC, LinearSVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import  plot_confusion_matrix, RocCurveDisplay, PrecisionRecallDisplay # uncomment the corresponding snippets to use
-from sklearn.multiclass import OneVsRestClassifier
 
 class ModelTrainer(object):
     def __init__(self, reader, C, kernel, iter, degree, penalty, solver, 
@@ -63,17 +62,12 @@ class ModelTrainer(object):
 
     def train(self):
         """Trains the model."""
-        # TODO: as we fiddle with these, should add options to adjust classifier parameters
         if self.classifier_type == "svc":
             self.model = SVC(kernel=self.params['kernel'], C=self.params['C'], max_iter=self.params['iter'], degree=self.params['degree'])
         elif self.classifier_type == "logit":
             self.model = LogisticRegression(penalty=self.params['penalty'], solver=self.params['solver'], C=self.params['C'], max_iter=self.params['iter'], n_jobs=-1)
         elif self.classifier_type == "rf":
             self.model = RandomForestClassifier(n_estimators=self.params['n_estimators'], criterion=self.params['criterion'], max_depth=self.params['max_depth'], min_samples_split=self.params['min_sample_split'], n_jobs=-1)
-        elif self.classifier_type == 'nl-svc':
-            self.model =  NuSVC(nu=.01, gamma='auto')
-        #self.model = OneVsRestClassifier(self.model)
-
         self.model.fit(self.X_train, self.Y_train)
 
        

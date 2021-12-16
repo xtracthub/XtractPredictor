@@ -3,7 +3,6 @@ from features.feature import FeatureMaker
 from random import randint
 import numpy as np
 
-
 class RandBytes(FeatureMaker):
     """Retrieves random bytes from a file."""
     def __init__(self, number_bytes=512):

@@ -153,6 +153,7 @@ if __name__ == '__main__':
     model_param_dict["max_depth"] = args.max_depth
     model_param_dict["min_sample_split"] = args.min_sample_split
     
-    train_extract_predictor(classifier=args.classifier, feature=args.feature, model_name=args.model_name,
-                            head_bytes=args.head_bytes, rand_bytes=args.rand_bytes, split=args.split, dirname=args.dirname, 
+    train_extract_predictor(classifier=args.classifier, feature=args.feature, 
+                            model_name=args.model_name, head_bytes=args.head_bytes, 
+                            rand_bytes=args.rand_bytes, split=args.split, dirname=args.dirname, 
                             model_param_dict=model_param_dict)

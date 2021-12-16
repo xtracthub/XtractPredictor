@@ -1,10 +1,10 @@
 import numpy as np
-from features.feature import FeatureMaker
+from feature import FeatureMaker
 
 
 class HeadBytes(FeatureMaker):
     """Retrieves bytes from the head of a file."""
-    def __init__(self, head_size=512):
+    def __init__(self, head_size):
         """Initializes HeadBytes class.
 
         Parameters:
@@ -31,20 +31,12 @@ class HeadBytes(FeatureMaker):
         If there are less than head_size bytes in
         open_file, the remainder of head is filled with empty bytes.
         """
-        byte = open_file.read(1) 
-        read = 1  
-        head = [] 
-
-        while byte and read < self.head_size:
-
-            head.append(byte)
-            read += 1
-            byte = open_file.read(1)
-
-        if len(head) < self.head_size:
-            head.extend([b'' for i in range(self.head_size - len(head))])
-        assert len(head) == self.head_size
-        return head
+        file_bytes = open_file.read(self.head_size) 
+        head_bytes = [file_bytes[i:i+1] for i in range(0, len(file_bytes))]       
+        if len(head_bytes) < self.head_size:
+            head_bytes.extend([b'' for i in range(self.head_size - len(head_bytes))])
+        assert len(head_bytes) == self.head_size
+        return head_bytes
 
     def translate(self, entry):
         """Translates a feature into an integer.
