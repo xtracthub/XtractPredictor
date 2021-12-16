@@ -18,10 +18,9 @@ from classifiers.predict import predict_single_file, predict_directory
 # Global current time for saving models, class-tables, and training info.
 current_time = datetime.datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
 
-def experiment(reader, classifier_name,
-               features, trials, split, model_name, features_outfile,
-               C, kernel, iter, degree, penalty, solver, n_estimators,
-               criterion, max_depth, min_sample_split):
+def experiment(reader, classifier_name, features, 
+               trials, split, model_name, features_outfile,
+               model_param_dict):
     """Trains classifier_name on features from files in reader trials number
     of times and saves the model and returns training and testing data.
 
@@ -89,94 +88,36 @@ def experiment(reader, classifier_name,
         if i != trials-1:
             classifier.shuffle()
 
+'''
+Similar to extract sampler, except we're simplifying so that it only trains doesn't predict
+'''
+def train_extract_predictor(results_file, model_param_dict, classifier='rf',
+                            feature='head', model_name=None, head_bytes=0, 
+                            rand_bytes=0, split=0.8, label_csv=None, dirname=None,
+                            predict_file=None, csv_outfile='naivetruth.csv'):
 
-# TODO: Remove most of these auto-filled values.
-def extract_sampler(mode='train', classifier='rf', feature='head', model_name=None, n=1, head_bytes=0, rand_bytes=0,
-                    split=0.8, label_csv=None, dirname=None, predict_file=None,
-                    trained_classifier=None, results_file="sampler_results.thing",
-                    csv_outfile='naivetruth.csv', features_outfile=None, C=None, kernel=None,
-                    iter=None, degree=None, penalty=None, solver=None, n_estimators=None,
-                    criterion=None, max_depth=None, min_sample_split=None):
-
-    if mode == 'predict' and trained_classifier is not None:
-        class_table_name = f"stored_models/class_tables/CLASS_TABLE-{(trained_classifier.split('/')[-1]).split('.')[0]}.json"
-        print(f"Class Table name: {class_table_name}")
-
-    if mode == 'predict' and predict_file is not None:
-        try:
-            with open(trained_classifier, 'rb') as classifier_file:
-                trained_classifier = pkl.load(classifier_file)
-        except Exception as e:
-            raise ValueError(f"Invalid trained classifier: {e}")
-
-
-        if feature not in ["head", "rand", "randhead"]:
-            print("Invalid feature option %s" % feature)
-            return
-        t0 = time.time()
-        prediction = predict_single_file(predict_file, trained_classifier, class_table_name=class_table_name,
-                                         feature=feature)
-        meta = {"sampler": {predict_file: prediction}, "extract time": time.time() - t0}
-        print(meta)
-        return meta
-
-    elif mode == 'predict' and dirname is not None:
-        try:
-            with open(trained_classifier, 'rb') as classifier_file:
-                trained_classifier = pkl.load(classifier_file)
-        except:
-            print("Invalid trained classifier")
-
-        if feature not in ["head", "rand", "randhead"]:
-            print("Invalid feature option %s" % feature)
-            return
-      
-        t0 = time.time()
-        predictions = predict_directory(dirname, trained_classifier,class_table_name=class_table_name,feature=feature, head_bytes=head_bytes,
-                                        rand_bytes=rand_bytes)
-        meta = {"sampler": predictions, "extract time": time.time() - t0}
-        print(meta)
-        return meta
-
-    elif mode == 'train':
-        if classifier not in ["svc", "logit", "rf", 'nl-svc']:
-            print("Invalid classifier option %s" % classifier)
-            return
-
-        if feature == "head":
-            features = HeadBytes(head_size=head_bytes)
-        elif feature == "rand":
-            features = RandBytes(number_bytes=rand_bytes)
-        elif feature == "randhead":
-            features = RandHead(head_size=head_bytes,
-                                rand_size=rand_bytes)
-        else:
-            print("Invalid feature option %s" % feature)
-            return
-
-        if model_name is None:
-            model_name = f"stored_models/trained_classifiers/{classifier}-{feature}-{current_time}.pkl"
-
-        # TODO: investigate and bring this back.
-        # if os.path.exists(features_outfile):
-        #     try:
-        #         with open(features_outfile, 'rb') as f:
-        #             reader = pkl.load(f)
-        #     except:
-        #         print("Invalid features outfile")
-        #         return
-        # else:
-
-        reader = NaiveTruthReader(features, labelfile=label_csv)
-
-        experiment(reader, classifier, feature, n,
-                   split, model_name, features_outfile, 
-                   C, kernel, iter, degree, penalty, solver,
-                   n_estimators, criterion, max_depth, 
-                   min_sample_split)
-
+    if classifier not in ["svc", "logit", "rf"]:
+        print("Invalid classifier option %s" % classifier)
+        return
+    if feature == "head":
+        features = HeadBytes(head_size=head_bytes)
+    elif feature == "rand":
+        features = RandBytes(number_bytes=rand_bytes)
+    elif feature == "randhead":
+        features = RandHead(head_size=head_bytes,
+                            rand_size=rand_bytes)
     else:
-        print("Invalid mode")
+        print("Invalid feature option %s" % feature)
+        return
+
+    if model_name is None:
+        model_name = f"stored_models/trained_classifiers/{classifier}-{feature}-{current_time}.pkl"
+
+    reader = NaiveTruthReader(features, labelfile=label_csv)
+
+    experiment(reader, classifier, feature, n,
+                split, model_name, features_outfile, 
+                model_param_dict)
 
 
 if __name__ == '__main__':
@@ -184,8 +125,6 @@ if __name__ == '__main__':
 
     parser.add_argument("--dirname", type=str, help="directory of files to predict if mode is predict"
                                                     "or directory to get labels and features of", default=None)
-    parser.add_argument("--n", type=int, default=1,
-                        help="number of trials", dest="n")
     parser.add_argument("--classifier", type=str,
                         help="model to use: svc, logit, rf")
     parser.add_argument("--feature", type=str, default="head",
@@ -201,9 +140,6 @@ if __name__ == '__main__':
     parser.add_argument("--predict_file", type=str, default=None,
                         help="file to predict based on a classifier and a "
                              "feature")
-    parser.add_argument("--trained_classifier", type=str,
-                        help="trained classifier to predict on",
-                        default='rf-head-default.pkl')
     parser.add_argument("--results_file", type=str,
                         default="sampler_results.json", help="Name for results file if predicting")
     parser.add_argument("--label_csv", type=str, help="Name of csv file with labels",
@@ -212,11 +148,7 @@ if __name__ == '__main__':
                         default='naivetruth.csv')
     parser.add_argument("--model_name", type=str, help="Name of model",
                         default=None)
-    parser.add_argument("--mode", type=str, help="Mode (train, predict, labels_features)",
-                        default='train')
-    parser.add_argument("--features_outfile", type=str, help="file to write features to if mode is labels_feautres"
-                                                             "else it's a pkl with a reader object",
-                        default=None)
+
     parser.add_argument("--C", type=float, help="regularization parameter that is only useful in Logit and SVC", default=1)
     parser.add_argument("--kernel", type=str, help="Specified SVC Kernel (Ignored for others)", default='rbf')
     parser.add_argument("--iter", type=int, help="number of max iterations until it stops (relevant for SVC and Logit only)", default=-1)
@@ -232,8 +164,19 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    mdata = extract_sampler(args.mode, args.classifier, args.feature, args.model_name, args.n, args.head_bytes,
-                            args.rand_bytes, args.split, args.label_csv, args.dirname, args.predict_file,
-                            args.trained_classifier, args.results_file, args.csv_outfile, args.features_outfile,
-                            args.C, args.kernel, args.iter, args.degree, args.penalty, args.solver, args.n_estimators, 
-                            args.criterion, args.max_depth, args.min_sample_split)
+    model_param_dict = dict()
+    model_param_dict["C"] = args.C
+    model_param_dict["kernel"] = args.kernel
+    model_param_dict["iter"] = args.iter
+    model_param_dict["degree"] = args.degree
+    model_param_dict["penalty"] = args.penalty
+    model_param_dict["solver"] = args.solver
+    model_param_dict["n_estimators"] = args.n_estimators
+    model_param_dict["criterion"] = args.criterion
+    model_param_dict["max_depth"] = args.max_depth
+    model_param_dict["min_sample_split"] = args.min_sample_split
+    
+    mdata = train_extract_predictor(classifier=args.classifier, feature=args.feature, model_name=args.model_name,
+                                    head_bytes=args.head_bytes, rand_bytes=args.rand_bytes, split=args.split, 
+                                    csv_outfile=args.label_csv, dirname=args.dirname, predict_file=args.predict_file,
+                                    results_file=args.results_file, model_param_dict=model_param_dict)
