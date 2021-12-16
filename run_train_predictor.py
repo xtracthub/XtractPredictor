@@ -19,8 +19,7 @@ from classifiers.predict import predict_single_file, predict_directory
 current_time = datetime.datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
 
 def experiment(reader, classifier_name, features, 
-               trials, split, model_name, features_outfile,
-               model_param_dict):
+               split, model_name, model_param_dict):
     """Trains classifier_name on features from files in reader trials number
     of times and saves the model and returns training and testing data.
 
@@ -31,17 +30,12 @@ def experiment(reader, classifier_name, features,
     classifier, "logit": logistic regression, or "rf": random forest).
     features (str): Type of features to train on (head, rand, randhead,
     ngram, randngram).
-    outfile (str): Name of file to write outputs to.
-    trials (int): Number of times to train a model with randomized features
-    for each training.
     split (float): Float between 0 and 1 which indicates how much data to
     use for training. The rest is used as a testing set.
-    features_oufile (str): File path to .pkl file where a reader class is
-    stored.
 
     Return:
     (pkl): Writes a pkl file containing the model.
-    (json): Writes a json named outfile with training and testing data.
+    (Sklearn Model): The copy of the model that was pkled
     """
     read_start_time = time.time()
     if features_outfile is None:
@@ -50,51 +44,46 @@ def experiment(reader, classifier_name, features,
 
     model_name = f"stored_models/trained_classifiers/{classifier_name}/{classifier_name}-{features}-{current_time}.pkl"
     class_table_path = f"stored_models/class_tables/{classifier_name}/CLASS_TABLE-{classifier_name}-{features}-{current_time}.json"
-    classifier = ModelTrainer(reader, C, kernel, iter, degree, penalty, solver,
-                              n_estimators, criterion, max_depth, min_sample_split,
+    classifier = ModelTrainer(reader, model_param_dict,
                               class_table_path=class_table_path, classifier=classifier_name,
                               split=split)
 
-    for i in range(trials):
-        print("Starting trial {} out of {} for {} {}".format(i, trials,
-                                                             classifier_name,
-                                                             features))
-        classifier_start = time.time()
-        print("training")
-        classifier.train()
-        print("done training")
-        accuracy, prec, recall = score_model(classifier.model, classifier.X_test,
-                               classifier.Y_test, classifier.class_table)
-        classifier_time = time.time() - classifier_start
+    classifier_start = time.time()
+    print("training")
+    classifier.train()
+    print("done training")
 
-        outfile_name = "{path}-info-{size}.json".format(path=os.path.splitext(model_name)[0], size=str(reader.get_feature_maker().get_number_of_features())+'Bytes')
+    accuracy, prec, recall = score_model(classifier.model, classifier.X_test,
+                            classifier.Y_test, classifier.class_table)
+    classifier_time = time.time() - classifier_start
 
-        with open(model_name, "wb") as model_file:
-            pkl.dump(classifier.model, model_file)
-        with open(outfile_name, "a") as data_file:
-            output_data = {"Classifier": classifier_name,
-                           "Feature": features,
-                           "Trial": i,
-                           "Read time": read_time,
-                           "Train and test time": classifier_time,
-                           "Model accuracy": accuracy,
-                           "Model precision": prec,
-                           "Model recall": recall,
-                           "Model size": os.path.getsize(model_name),
-                           "Modifiable Parameters": classifier.get_parameters(),
-                           "Parameters": classifier.model.get_params()}
-            json.dump(output_data, data_file, indent=4)
+    outfile_name = "{path}-info-{size}.json".format(path=os.path.splitext(model_name)[0], 
+                    size=str(reader.get_feature_maker().get_number_of_features())+'Bytes')
 
-        if i != trials-1:
-            classifier.shuffle()
+    with open(model_name, "wb") as model_file:
+        pkl.dump(classifier.model, model_file)
+    with open(outfile_name, "a") as data_file:
+        output_data = {"Classifier": classifier_name,
+                        "Feature": features,
+                        "Trial": i,
+                        "Read time": read_time,
+                        "Train and test time": classifier_time,
+                        "Model accuracy": accuracy,
+                        "Model precision": prec,
+                        "Model recall": recall,
+                        "Model size": os.path.getsize(model_name),
+                        "Modifiable Parameters": classifier.get_parameters(),
+                        "Parameters": classifier.model.get_params()}
+        json.dump(output_data, data_file, indent=4)
+
+    return classifier.model
 
 '''
 Similar to extract sampler, except we're simplifying so that it only trains doesn't predict
 '''
 def train_extract_predictor(results_file, model_param_dict, classifier='rf',
                             feature='head', model_name=None, head_bytes=0, 
-                            rand_bytes=0, split=0.8, label_csv=None, dirname=None,
-                            csv_outfile='naivetruth.csv'):
+                            rand_bytes=0, split=0.8, dirname=None):
 
     if classifier not in ["svc", "logit", "rf"]:
         print("Invalid classifier option %s" % classifier)
@@ -104,8 +93,7 @@ def train_extract_predictor(results_file, model_param_dict, classifier='rf',
     elif feature == "rand":
         features = RandBytes(number_bytes=rand_bytes)
     elif feature == "randhead":
-        features = RandHead(head_size=head_bytes,
-                            rand_size=rand_bytes)
+        features = RandHead(head_size=head_bytes, rand_size=rand_bytes)
     else:
         print("Invalid feature option %s" % feature)
         return
@@ -114,11 +102,8 @@ def train_extract_predictor(results_file, model_param_dict, classifier='rf',
         model_name = f"stored_models/trained_classifiers/{classifier}-{feature}-{current_time}.pkl"
 
     reader = NaiveTruthReader(features, labelfile=label_csv)
-
-    experiment(reader, classifier, feature, n,
-                split, model_name, features_outfile, 
-                model_param_dict)
-
+    model = experiment(reader, classifier, feature,
+            split, model_name, model_param_dict)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run file classification experiments')
@@ -131,21 +116,13 @@ if __name__ == '__main__':
                         help="feature to use: head, rand, randhead")
     parser.add_argument("--split", type=float, default=0.8,
                         help="test/train split ratio", dest="split")
-    parser.add_argument("--head_bytes", type=int, default=512,
+    parser.add_argument("--head_bytes", type=int, default=0,
                         dest="head_bytes",
-                        help="size of file head in bytes, default 512")
-    parser.add_argument("--rand_bytes", type=int, default=512,
+                        help="size of file head in bytes")
+    parser.add_argument("--rand_bytes", type=int, default=0,
                         dest="rand_bytes",
-                        help="number of random bytes, default 512")
-    parser.add_argument("--predict_file", type=str, default=None,
-                        help="file to predict based on a classifier and a "
-                             "feature")
-    parser.add_argument("--results_file", type=str,
-                        default="sampler_results.json", help="Name for results file if predicting")
-    parser.add_argument("--label_csv", type=str, help="Name of csv file with labels",
-                        default="automated_training_results/naivetruth.csv")
-    parser.add_argument("--csv_outfile", type=str, help="file to write labels to",
-                        default='naivetruth.csv')
+                        help="number of random bytes")
+    parser.add_argument("--label_csv", type=str, help="Name of csv file with labels")
     parser.add_argument("--model_name", type=str, help="Name of model",
                         default=None)
 
@@ -176,7 +153,6 @@ if __name__ == '__main__':
     model_param_dict["max_depth"] = args.max_depth
     model_param_dict["min_sample_split"] = args.min_sample_split
     
-    mdata = train_extract_predictor(classifier=args.classifier, feature=args.feature, model_name=args.model_name,
-                                    head_bytes=args.head_bytes, rand_bytes=args.rand_bytes, split=args.split, 
-                                    csv_outfile=args.label_csv, dirname=args.dirname, 
-                                    results_file=args.results_file, model_param_dict=model_param_dict)
+    train_extract_predictor(classifier=args.classifier, feature=args.feature, model_name=args.model_name,
+                            head_bytes=args.head_bytes, rand_bytes=args.rand_bytes, split=args.split, dirname=args.dirname, 
+                            model_param_dict=model_param_dict)
