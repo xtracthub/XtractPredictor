@@ -1,5 +1,6 @@
 import numpy as np
 from feature import FeatureMaker
+import sys
 
 
 class HeadBytes(FeatureMaker):
@@ -15,9 +16,6 @@ class HeadBytes(FeatureMaker):
         self.nfeatures = head_size
         self.class_table = {}
 
-    # TODO: There has to be a better way than this for acquiring the features?
-    # Seems like iterating through each byte one by one will be difficult in 
-    # terms of scaling efficiently for training
  
     def get_feature(self, open_file):
         """Retrieves the first head_size number of bytes from a file.
@@ -48,14 +46,18 @@ class HeadBytes(FeatureMaker):
         (tuple): 2-tuple of a numpy array containing an integer version of
         entry and a dictionary of labels and indices.
         """
+        # a feature is a row with data on its file name, byte features, and label
+        # entry[2] represents the entry with the byte features        
 
-        x = [int.from_bytes(c, byteorder="big") for c in entry[2]]
+        x = [int.from_bytes(c, byteorder=sys.byteorder) for c in entry[2]]
 
+        # y is the label for this vector of features 
+        # last value of entry entry[-1] is the label so we get that label and we save it in y
         try:
             y = self.class_table[entry[-1]]
         except KeyError:
+            # class table is filled out in the order that it is presented in the training data
             self.class_table[entry[-1]] = len(self.class_table) + 1
             y = self.class_table[entry[-1]]
-
         return np.array(x), y
 
