@@ -97,7 +97,6 @@ def train_extract_predictor(model_param_dict, classifier,
         print("Invalid feature option %s" % feature)
         return
 
-
     feature_file = f"stored_features/{label_csv}-{head_bytes}-{rand_bytes}-features.pkl"
     reader = NaiveTruthReader(features, labelfile=label_csv, feature_outfile=feature_file)
     model = experiment(reader, classifier, feature,
