@@ -1,7 +1,6 @@
 import numpy as np
-from feature import FeatureMaker
+from features.feature import FeatureMaker
 import sys
-
 
 class HeadBytes(FeatureMaker):
     """Retrieves bytes from the head of a file."""

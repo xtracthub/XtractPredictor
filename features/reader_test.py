@@ -27,7 +27,7 @@ for group in groups:
 	raw_data, X, Y = group
 	print("new group")
 	for i in range(len(raw_data)):
-	
+		print(raw_data[i][2])
 		x, y = reader.feature.translate(raw_data[i])
 		X[i] = x
 		Y[i] = y

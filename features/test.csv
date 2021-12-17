@@ -1,4 +1,4 @@
 path,size,file_label,infer_time
-feature_test_files/calibrum.jpg,1361,image,0.36357
-feature_test_files/corr_map.csv,17836,tabular,0.24212
-feature_test_files/I9.pdf,41569,keyword,0.12335
+features/feature_test_files/calibrum.jpg,1361,image,0.36357
+features/feature_test_files/corr_map.csv,17836,tabular,0.24212
+features/feature_test_files/I9.pdf,41569,keyword,0.12335

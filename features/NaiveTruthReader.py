@@ -42,6 +42,9 @@ class NaiveTruthReader(object):
         pools.join()
         for idx, item in enumerate(self.data):
             self.data[idx] = item
+        if len(self.data) == 0:
+            print("ERROR: Could not open any file. Stopping.")
+            exit()
     
     def get_feature_maker(self):
         return self.feature

@@ -1,18 +1,19 @@
 import numpy as np
 import json
 from random import shuffle
-from sklearn.svm import SVC, NuSVC, LinearSVC
+from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import  plot_confusion_matrix, RocCurveDisplay, PrecisionRecallDisplay # uncomment the corresponding snippets to use
+from sklearn.metrics import plot_confusion_matrix, RocCurveDisplay, PrecisionRecallDisplay # uncomment the corresponding snippets to use
 
 class ModelTrainer(object):
-    def __init__(self, reader, C, kernel, iter, degree, penalty, solver, 
-                n_estimators, criterion, max_depth, min_sample_split,
-                class_table_path, classifier="svc", split=0.8):
+    def __init__(self, reader, model_param_dict, class_table_path, classifier="svc", split=0.8):
         """Initializes the ModelTrainer class.
         reader (list): List of file paths, features, and labels read from a
         label file.
+        model_param_dict (dict): Dictionary of parameters for model. If you fill in values 
+        not associated with that classifier they are ignored. If you forget to fill in values
+        default values are used (chosen when args were passed in on cmd)
         classifier (str): Type of classifier to use ("svc": support vector
         classifier, "logit": logistic regression, or "rf": random forest).
         split (float): Float between 0 and 1 which indicates how much data to
@@ -22,11 +23,8 @@ class ModelTrainer(object):
         self.model = None
         self.class_table = reader.feature.class_table
         self.split = split
-        self.params = self.parse_parameters(C, kernel, iter, degree, 
-                                                penalty, solver, n_estimators,
-                                                criterion, max_depth, min_sample_split)
+        self.params = model_param_dict
         
-
         data = [line for line in reader.data]
 
         # Puts the data in a different order. (in-place action)
@@ -63,65 +61,18 @@ class ModelTrainer(object):
     def train(self):
         """Trains the model."""
         if self.classifier_type == "svc":
-            self.model = SVC(kernel=self.params['kernel'], C=self.params['C'], max_iter=self.params['iter'], degree=self.params['degree'])
+            self.model = SVC(kernel=self.params['kernel'], C=self.params['C'],
+                             max_iter=self.params['iter'], degree=self.params['degree'])
         elif self.classifier_type == "logit":
-            self.model = LogisticRegression(penalty=self.params['penalty'], solver=self.params['solver'], C=self.params['C'], max_iter=self.params['iter'], n_jobs=-1)
+            self.model = LogisticRegression(penalty=self.params['penalty'], solver=self.params['solver'],
+                                             C=self.params['C'], max_iter=self.params['iter'], n_jobs=-1)
         elif self.classifier_type == "rf":
-            self.model = RandomForestClassifier(n_estimators=self.params['n_estimators'], criterion=self.params['criterion'], max_depth=self.params['max_depth'], min_samples_split=self.params['min_sample_split'], n_jobs=-1)
+            self.model = RandomForestClassifier(n_estimators=self.params['n_estimators'],
+                                                 criterion=self.params['criterion'], max_depth=self.params['max_depth'], 
+                                                 min_samples_split=self.params['min_sample_split'], n_jobs=-1)
+
         self.model.fit(self.X_train, self.Y_train)
-
-       
-
-    def shuffle(self, split=None):
-        """Shuffles the datasets for new trials."""
-        if split is None:
-            split = self.split
-
-        old_X = np.concatenate((self.X_train, self.X_test), axis=0)
-        old_Y = np.concatenate((self.Y_train, self.Y_test), axis=0)
-
-        perm = np.random.permutation(old_Y.shape[0])
-
-        X = old_X[perm]
-        Y = old_Y[perm]
-
-        split_index = int(split * X.shape[0])
-
-        self.X_train = X[:split_index]
-        self.Y_train = Y[:split_index]
-
-        self.X_test = X[split_index:]
-        self.Y_test = Y[split_index:]
 
     def get_parameters(self):
         return self.params
     
-    def parse_parameters(self, C, kernel, iter, degree, penalty, solver,
-                        n_estimators, criterion, max_depth, min_sample_split):
-
-        params = dict()
-
-        if self.classifier_type == 'svc':
-            params['C'] = C
-            params['kernel'] = kernel
-            params['iter'] = iter
-            params['degree'] = degree
-
-        elif self.classifier_type == 'logit':
-            params['C'] = C
-            params['iter'] = iter
-            params['penalty'] = penalty
-            params['solver'] = solver
-        
-        elif self.classifier_type == 'rf':
-            params['n_estimators'] = n_estimators
-            params['criterion'] = criterion
-            params['max_depth'] = max_depth
-            params['min_sample_split'] = min_sample_split
-    
-        else:
-            print("Illegal Classifier.")
-
-        return params
-
- 

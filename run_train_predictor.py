@@ -6,12 +6,11 @@ import json
 import os
 
 from features.headbytes import HeadBytes
-from features.readers.readers import NaiveTruthReader
+from features.NaiveTruthReader import NaiveTruthReader
 from classifiers.train_model import ModelTrainer
 from classifiers.test_model import score_model
 from features.randbytes import RandBytes
 from features.randhead import RandHead
-from classifiers.predict import predict_single_file, predict_directory
 # from automated_training import write_naive_truth
 # from cloud_automated_training import write_naive_truth
 
@@ -38,15 +37,12 @@ def experiment(reader, classifier_name, features,
     (Sklearn Model): The copy of the model that was pkled
     """
     read_start_time = time.time()
-    if features_outfile is None:
-        reader.run()
+    reader.run()
     read_time = time.time() - read_start_time
 
     model_name = f"stored_models/trained_classifiers/{classifier_name}/{classifier_name}-{features}-{current_time}.pkl"
     class_table_path = f"stored_models/class_tables/{classifier_name}/CLASS_TABLE-{classifier_name}-{features}-{current_time}.json"
-    classifier = ModelTrainer(reader, model_param_dict,
-                              class_table_path=class_table_path, classifier=classifier_name,
-                              split=split)
+    classifier = ModelTrainer(reader, model_param_dict, class_table_path, classifier=classifier_name, split=split)
 
     classifier_start = time.time()
     print("training")
@@ -65,14 +61,12 @@ def experiment(reader, classifier_name, features,
     with open(outfile_name, "a") as data_file:
         output_data = {"Classifier": classifier_name,
                         "Feature": features,
-                        "Trial": i,
                         "Read time": read_time,
                         "Train and test time": classifier_time,
                         "Model accuracy": accuracy,
                         "Model precision": prec,
                         "Model recall": recall,
                         "Model size": os.path.getsize(model_name),
-                        "Modifiable Parameters": classifier.get_parameters(),
                         "Parameters": classifier.model.get_params()}
         json.dump(output_data, data_file, indent=4)
 
@@ -81,9 +75,9 @@ def experiment(reader, classifier_name, features,
 '''
 Similar to extract sampler, except we're simplifying so that it only trains doesn't predict
 '''
-def train_extract_predictor(results_file, model_param_dict, classifier='rf',
-                            feature='head', model_name=None, head_bytes=0, 
-                            rand_bytes=0, split=0.8, dirname=None):
+def train_extract_predictor(model_param_dict, classifier,
+                            feature, model_name, head_bytes, 
+                            rand_bytes, split, dirname, label_csv):
 
     if classifier not in ["svc", "logit", "rf"]:
         print("Invalid classifier option %s" % classifier)
@@ -111,7 +105,7 @@ if __name__ == '__main__':
     parser.add_argument("--dirname", type=str, help="directory of files to predict if mode is predict"
                                                     "or directory to get labels and features of", default=None)
     parser.add_argument("--classifier", type=str,
-                        help="model to use: svc, logit, rf")
+                        help="model to use: svc, logit, rf", default="rf")
     parser.add_argument("--feature", type=str, default="head",
                         help="feature to use: head, rand, randhead")
     parser.add_argument("--split", type=float, default=0.8,
@@ -122,7 +116,7 @@ if __name__ == '__main__':
     parser.add_argument("--rand_bytes", type=int, default=0,
                         dest="rand_bytes",
                         help="number of random bytes")
-    parser.add_argument("--label_csv", type=str, help="Name of csv file with labels")
+    parser.add_argument("--label_csv", type=str, help="Name of csv file with labels", default=None)
     parser.add_argument("--model_name", type=str, help="Name of model",
                         default=None)
 
@@ -152,8 +146,12 @@ if __name__ == '__main__':
     model_param_dict["criterion"] = args.criterion
     model_param_dict["max_depth"] = args.max_depth
     model_param_dict["min_sample_split"] = args.min_sample_split
+
+    if args.label_csv == None:
+        print("ERROR: No label csv specified")
+        exit()
     
     train_extract_predictor(classifier=args.classifier, feature=args.feature, 
                             model_name=args.model_name, head_bytes=args.head_bytes, 
                             rand_bytes=args.rand_bytes, split=args.split, dirname=args.dirname, 
-                            model_param_dict=model_param_dict)
+                            model_param_dict=model_param_dict, label_csv=args.label_csv)
