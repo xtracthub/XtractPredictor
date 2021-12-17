@@ -39,9 +39,14 @@ def experiment(reader, classifier_name, features,
     read_start_time = time.time()
     reader.run()
     read_time = time.time() - read_start_time
+    
+    if model_name is None:
+        model_name = f"stored_models/trained_classifiers/{classifier_name}/{classifier_name}-{features}-{current_time}.pkl"
+    else:
+        model_name = f"stored_models/trained_classifiers/{classifier_name}/{model_name}-{current_time}.pkl"
 
-    model_name = f"stored_models/trained_classifiers/{classifier_name}/{classifier_name}-{features}-{current_time}.pkl"
     class_table_path = f"stored_models/class_tables/{classifier_name}/CLASS_TABLE-{classifier_name}-{features}-{current_time}.json"
+
     classifier = ModelTrainer(reader, model_param_dict, class_table_path, classifier=classifier_name, split=split)
 
     classifier_start = time.time()
@@ -92,12 +97,12 @@ def train_extract_predictor(model_param_dict, classifier,
         print("Invalid feature option %s" % feature)
         return
 
-    if model_name is None:
-        model_name = f"stored_models/trained_classifiers/{classifier}-{feature}-{current_time}.pkl"
 
-    reader = NaiveTruthReader(features, labelfile=label_csv)
+    feature_file = f"stored_features/{label_csv}-{head_bytes}-{rand_bytes}-features.pkl"
+    reader = NaiveTruthReader(features, labelfile=label_csv, feature_outfile=feature_file)
     model = experiment(reader, classifier, feature,
             split, model_name, model_param_dict)
+    return model
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run file classification experiments')

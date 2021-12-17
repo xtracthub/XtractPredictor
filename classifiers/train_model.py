@@ -18,6 +18,8 @@ class ModelTrainer(object):
         classifier, "logit": logistic regression, or "rf": random forest).
         split (float): Float between 0 and 1 which indicates how much data to
         use for training. The rest is used as a testing set.
+
+        
         """
         self.classifier_type = classifier
         self.model = None
