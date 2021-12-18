@@ -36,10 +36,7 @@ def experiment(reader, classifier_name, features,
     (pkl): Writes a pkl file containing the model.
     (Sklearn Model): The copy of the model that was pkled
     """
-    read_start_time = time.time()
-    reader.run()
-    read_time = time.time() - read_start_time
-    
+       
     if model_name is None:
         model_name = f"stored_models/trained_classifiers/{classifier_name}/{classifier_name}-{features}-{current_time}.pkl"
     else:
@@ -87,18 +84,7 @@ def train_extract_predictor(model_param_dict, classifier,
     if classifier not in ["svc", "logit", "rf"]:
         print("Invalid classifier option %s" % classifier)
         return
-    if feature == "head":
-        features = HeadBytes(head_size=head_bytes)
-    elif feature == "rand":
-        features = RandBytes(number_bytes=rand_bytes)
-    elif feature == "randhead":
-        features = RandHead(head_size=head_bytes, rand_size=rand_bytes)
-    else:
-        print("Invalid feature option %s" % feature)
-        return
-
-    feature_file = f"stored_features/{label_csv}-{head_bytes}-{rand_bytes}-features.pkl"
-    reader = NaiveTruthReader(features, labelfile=label_csv, feature_outfile=feature_file)
+     
     model = experiment(reader, classifier, feature,
             split, model_name, model_param_dict)
     return model
@@ -157,5 +143,5 @@ if __name__ == '__main__':
     
     train_extract_predictor(classifier=args.classifier, feature=args.feature, 
                             model_name=args.model_name, head_bytes=args.head_bytes, 
-                            rand_bytes=args.rand_bytes, split=args.split, dirname=args.dirname, 
+                            rand_bytes=args.rand_bytes, split=args.split, dirname=args.dirname,
                             model_param_dict=model_param_dict, label_csv=args.label_csv)
