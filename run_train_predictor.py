@@ -17,8 +17,7 @@ from features.randhead import RandHead
 # Global current time for saving models, class-tables, and training info.
 current_time = datetime.datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
 
-def experiment(reader, classifier_name, features, 
-               split, model_name, model_param_dict):
+def experiment(reader, classifier_name, split, model_name, model_param_dict):
     """Trains classifier_name on features from files in reader trials number
     of times and saves the model and returns training and testing data.
 
@@ -27,8 +26,6 @@ def experiment(reader, classifier_name, features,
     label file.
     classifier_name (str): Type of classifier to use ("svc": support vector
     classifier, "logit": logistic regression, or "rf": random forest).
-    features (str): Type of features to train on (head, rand, randhead,
-    ngram, randngram).
     split (float): Float between 0 and 1 which indicates how much data to
     use for training. The rest is used as a testing set.
 
@@ -36,13 +33,12 @@ def experiment(reader, classifier_name, features,
     (pkl): Writes a pkl file containing the model.
     (Sklearn Model): The copy of the model that was pkled
     """
-       
     if model_name is None:
-        model_name = f"stored_models/trained_classifiers/{classifier_name}/{classifier_name}-{features}-{current_time}.pkl"
+        model_name = f"stored_models/trained_classifiers/{classifier_name}/{classifier_name}-{reader.name}-{current_time}.pkl"
     else:
-        model_name = f"stored_models/trained_classifiers/{classifier_name}/{model_name}-{current_time}.pkl"
+        model_name = f"stored_models/trained_classifiers/{classifier_name}/{model_name}-{reader.name}-{current_time}.pkl"
 
-    class_table_path = f"stored_models/class_tables/{classifier_name}/CLASS_TABLE-{classifier_name}-{features}-{current_time}.json"
+    class_table_path = f"stored_models/class_tables/{classifier_name}/CLASS_TABLE-{classifier_name}-{reader.name}-{current_time}.json"
 
     classifier = ModelTrainer(reader, model_param_dict, class_table_path, classifier=classifier_name, split=split)
 
@@ -53,6 +49,7 @@ def experiment(reader, classifier_name, features,
 
     accuracy, prec, recall = score_model(classifier.model, classifier.X_test,
                             classifier.Y_test, classifier.class_table)
+
     classifier_time = time.time() - classifier_start
 
     outfile_name = "{path}-info-{size}.json".format(path=os.path.splitext(model_name)[0], 
@@ -62,8 +59,7 @@ def experiment(reader, classifier_name, features,
         pkl.dump(classifier.model, model_file)
     with open(outfile_name, "a") as data_file:
         output_data = {"Classifier": classifier_name,
-                        "Feature": features,
-                        "Read time": read_time,
+                        "Dataset Trained On": reader.name,
                         "Train and test time": classifier_time,
                         "Model accuracy": accuracy,
                         "Model precision": prec,
@@ -78,37 +74,29 @@ def experiment(reader, classifier_name, features,
 Similar to extract sampler, except we're simplifying so that it only trains doesn't predict
 '''
 def train_extract_predictor(model_param_dict, classifier,
-                            feature, model_name, head_bytes, 
-                            rand_bytes, split, dirname, label_csv):
-
+                            feature_reader, model_name, split):
     if classifier not in ["svc", "logit", "rf"]:
         print("Invalid classifier option %s" % classifier)
         return
-     
-    model = experiment(reader, classifier, feature,
-            split, model_name, model_param_dict)
+    try:
+        reader = pkl.load(open(args.feature_reader, "rb"))
+    except OSError:
+        print("ERROR: Feature reader file has not been specified/does not exist. Stopping.")
+        return
+
+    model = experiment(reader, classifier, split, model_name, model_param_dict)
     return model
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run file classification experiments')
-
-    parser.add_argument("--dirname", type=str, help="directory of files to predict if mode is predict"
-                                                    "or directory to get labels and features of", default=None)
     parser.add_argument("--classifier", type=str,
                         help="model to use: svc, logit, rf", default="rf")
-    parser.add_argument("--feature", type=str, default="head",
-                        help="feature to use: head, rand, randhead")
     parser.add_argument("--split", type=float, default=0.8,
                         help="test/train split ratio", dest="split")
-    parser.add_argument("--head_bytes", type=int, default=0,
-                        dest="head_bytes",
-                        help="size of file head in bytes")
-    parser.add_argument("--rand_bytes", type=int, default=0,
-                        dest="rand_bytes",
-                        help="number of random bytes")
-    parser.add_argument("--label_csv", type=str, help="Name of csv file with labels", default=None)
     parser.add_argument("--model_name", type=str, help="Name of model",
                         default=None)
+    parser.add_argument("--feature_reader", type=str, help="Path to Reader object that extracted directory's features",
+                        default="")
 
     parser.add_argument("--C", type=float, help="regularization parameter that is only useful in Logit and SVC", default=1)
     parser.add_argument("--kernel", type=str, help="Specified SVC Kernel (Ignored for others)", default='rbf')
@@ -137,11 +125,5 @@ if __name__ == '__main__':
     model_param_dict["max_depth"] = args.max_depth
     model_param_dict["min_sample_split"] = args.min_sample_split
 
-    if args.label_csv == None:
-        print("ERROR: No label csv specified")
-        exit()
-    
-    train_extract_predictor(classifier=args.classifier, feature=args.feature, 
-                            model_name=args.model_name, head_bytes=args.head_bytes, 
-                            rand_bytes=args.rand_bytes, split=args.split, dirname=args.dirname,
-                            model_param_dict=model_param_dict, label_csv=args.label_csv)
+    train_extract_predictor(classifier=args.classifier, model_name=args.model_name, 
+        split=args.split, model_param_dict=model_param_dict, feature_reader=args.feature_reader)

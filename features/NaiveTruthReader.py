@@ -22,6 +22,7 @@ class NaiveTruthReader(object):
         self.feature = feature_maker
         self.data = []
         self.labelfile = labelfile
+        self.name = self.feature.name + "-" + self.labelfile
 
     def extract_row_data(self, row):
         try:

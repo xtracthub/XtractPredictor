@@ -10,7 +10,7 @@ class HeadBytes(FeatureMaker):
         Parameters:
         head_size (int): Number of bytes to get from header.
         """
-        self.name = "head"
+        self.name = "head-" + str(head_size)
         self.head_size = head_size
         self.nfeatures = head_size
         self.class_table = {}
