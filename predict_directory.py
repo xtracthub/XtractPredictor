@@ -1,3 +1,6 @@
+import argparse
+import pickle
+
 import numpy as np
 import json
 import os
@@ -71,7 +74,7 @@ def predict_directory(dir_name, trained_classifier, class_table_name, feature, h
             file_predictions[file_path] = file_dict
 
     
-    json.dump(file_predictions,open('directory_probability_predictions.json', 'w+'), indent=4)
+    json.dump(file_predictions,open(dir_name + "_probability_predictions.json', 'w+'), indent=4)
     return file_predictions
 
 def probability_dictionary(probabilities, label_map):
@@ -81,5 +84,19 @@ def probability_dictionary(probabilities, label_map):
     return probability_dict
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Run file classification experiments')
+    parser.add_argument("--dir_name", type=str, help="Directory to make predictions one")
+    parser.add_argument("--trained_classifier", type=str, help="Path to saved and trained sklearn classifier")
+    parser.add_argument("--class_table", type=str, help="Path to class table associated with trained classifier")
+    parser.add_argument("--feature", type=str, help="Feature to classify directory on (head, rand, randhead) its reccomended you use the same feature as the one used to train the classifier on")
+    parser.add_argument("--head_bytes", type=int, help="Number of head bytes to extract from each file, reccomended to have same value you used to also train the classifier on",
+                        default=0)
+    parser.add_argument("--rand_bytes", type=int, help="Number of rand bytes to extract from each file, reccomended to have same value you used to also train the classifier on",
+                        default=0)
 
-	
+    args = parser.parse_args()
+
+    model = pickle.load(open(args.trained_classifier, "rb"))
+
+    file_predictions = predict_directory(arg.dir_name, model, args.class_table,
+                        args.feature, args.head_bytes, args.rand_bytes)
