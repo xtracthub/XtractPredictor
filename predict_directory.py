@@ -74,7 +74,7 @@ def predict_directory(dir_name, trained_classifier, class_table_name, feature, h
             file_predictions[file_path] = file_dict
 
     
-    json.dump(file_predictions,open(dir_name + "_probability_predictions.json', 'w+'), indent=4)
+    json.dump(file_predictions,open(dir_name + '_probability_predictions.json', 'w+'), indent=4)
     return file_predictions
 
 def probability_dictionary(probabilities, label_map):
@@ -98,5 +98,5 @@ if __name__ == '__main__':
 
     model = pickle.load(open(args.trained_classifier, "rb"))
 
-    file_predictions = predict_directory(arg.dir_name, model, args.class_table,
+    file_predictions = predict_directory(args.dir_name, model, args.class_table,
                         args.feature, args.head_bytes, args.rand_bytes)
