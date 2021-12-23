@@ -5,7 +5,7 @@ import numpy as np
 import json
 import os
 from features.headbytes import HeadBytes
-from features.readers.readers import FileReader 
+from features import NaiveTruthReader 
 from features.randbytes import RandBytes
 from features.randhead import RandHead
 from sklearn.metrics import precision_score, recall_score
@@ -34,7 +34,7 @@ def predict_single_file(filename, trained_classifier, class_table_name, feature,
     else:
         raise Exception("Not a valid feature set. ")
 
-    reader = FileReader(feature_maker=features, filename=filename)
+    reader = NaiveTruthReader(feature_maker=features, filename=filename)
     reader.run()
 
     predict_start_time = time.time()
