@@ -1,11 +1,11 @@
 import argparse
-import pickle
+import pickle as pkl
 
 import numpy as np
 import json
 import os
 from features.headbytes import HeadBytes
-from features import NaiveTruthReader 
+from features.NaiveTruthReader import NaiveTruthReader 
 from features.randbytes import RandBytes
 from features.randhead import RandHead
 from sklearn.metrics import precision_score, recall_score
@@ -26,22 +26,41 @@ def predict_single_file(filename, trained_classifier, class_table_name, feature,
         label_map = json.load(f)
         f.close()
     if feature == "head":
-        features = HeadBytes(head_size=head_bytes)
+        feature_obj = HeadBytes(head_size=head_bytes)
     elif feature == "randhead":
-        features = RandHead(head_size=head_bytes, rand_size=rand_bytes)
+        feature_obj = RandHead(head_size=head_bytes, rand_size=rand_bytes)
     elif feature == "rand":
-        features = RandBytes(number_bytes=rand_bytes)
+        feature_obj = RandBytes(number_bytes=rand_bytes)
     else:
         raise Exception("Not a valid feature set. ")
 
-    reader = NaiveTruthReader(feature_maker=features, filename=filename)
-    reader.run()
+
+    print(f"Features: {feature_obj}")
+    print(f"Filename: {filename}") 
+    
+    reader = NaiveTruthReader(feature_maker=feature_obj, labelfile='123')
+
+    with open(filename, "rb") as open_file:
+        features = reader.feature.get_feature(open_file)
+        """
+        row_data = ([os.path.dirname(row["path"]),
+                     os.path.basename(row["path"]), 
+                     features,
+                     row["file_label"]])
+        """
+    # TODO: TYLER -- wtf is in reader.data.
+    # reader = NaiveTruthReader(feature_maker=feature_obj, labelfile='cdiac_EAGLE.csv')
+    # reader.run()
+    # print(features)
+    # exit()
+
+    
 
     predict_start_time = time.time()
     extract_time = predict_start_time - start_extract_time
 
-    data = [line for line in reader.data][2]
-    x = np.array([int.from_bytes(c, byteorder="big") for c in data])
+    # data = [line for line in reader.data][2]
+    x = np.array([int.from_bytes(c, byteorder="big") for c in features])
     x = [x]
 
     prediction = trained_classifier.predict(x)
@@ -52,6 +71,34 @@ def predict_single_file(filename, trained_classifier, class_table_name, feature,
     predict_time = time.time() - predict_start_time
 
     return label, prediction_probabilities, x, extract_time, predict_time
+
+
+def probability_dictionary(probabilities, label_map):
+    probability_dict = dict()
+    for i in range(len(probabilities)):
+        probability_dict[list(label_map.keys())[i]] = probabilities[i]
+    return probability_dict
+
+
+# filename = "/home/tskluzac/local_config.py"
+# filename = "/home/tskluzac/.xtract/.test_files/animal-photography-olga-barantseva-11.jpg"
+# filename = "/eagle/Xtract/cdiac/weather_2012.csv"
+# filename = "/eagle/Xtract/cdiac/cdiac.ornl.gov/pub4/ndp055b/africa_forest_2000.gif"
+# filename = "/eagle/Xtract/cdiac/cdiac.ornl.gov/pub8old/pub8/koertzinger_grl24.pdf"
+# filename = "/eagle/Xtract/cdiac/cdiac.ornl.gov/pub8old/pub8/kaxis_underway_v3_201516030_60sec.csv"
+# filename = "/eagle/Xtract/cdiac/cdiac.ornl.gov/pub8old/pub8/CdiacBundles/33GC/CO2_readme.doc"
+# filename = "/eagle/Xtract/cdiac/cdiac.ornl.gov/pub8old/pub8/CdiacBundles/33GC/33GC20100914.tsv"
+# filename = "/eagle/Xtract/cdiac/cdiac.ornl.gov/pub8old/pub8/oceans/Benjamin/For_Stew/CdiacBundles/33WA/WS1305-1_readme.xml"
+filename = "/eagle/Xtract/cdiac/cdiac.ornl.gov/pub8old/pub8/Hydrochem_data/in2016_v02Hydro012.nc"
+
+trained_classifier = "stored_models/trained_classifiers/rf/rf-head-512-cdiac_EAGLE.csv-2021-12-23-23:01:06.pkl"
+class_table_name = "stored_models/class_tables/rf/CLASS_TABLE-rf-head-512-cdiac_EAGLE.csv-2021-12-23-23:01:06.json"
+feature = "head"
+with open(trained_classifier, 'rb') as f:
+    model = pkl.load(f)
+x = predict_single_file(filename, model, class_table_name, feature)
+print(x)
+
 
 def predict_directory(dir_name, trained_classifier, class_table_name, feature, head_bytes=512, rand_bytes=512):
     """
@@ -77,12 +124,7 @@ def predict_directory(dir_name, trained_classifier, class_table_name, feature, h
     json.dump(file_predictions,open(dir_name + '_probability_predictions.json', 'w+'), indent=4)
     return file_predictions
 
-def probability_dictionary(probabilities, label_map):
-    probability_dict = dict()
-    for i in range(len(probabilities)):
-        probability_dict[list(label_map.keys())[i]] = probabilities[i]
-    return probability_dict
-
+"""
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run file classification experiments')
     parser.add_argument("--dir_name", type=str, help="Directory to make predictions one")
@@ -100,3 +142,4 @@ if __name__ == '__main__':
 
     file_predictions = predict_directory(args.dir_name, model, args.class_table,
                         args.feature, args.head_bytes, args.rand_bytes)
+"""
