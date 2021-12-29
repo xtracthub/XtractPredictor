@@ -35,8 +35,8 @@ def predict_single_file(filename, trained_classifier, class_table_name, feature,
         raise Exception("Not a valid feature set. ")
 
 
-    print(f"Features: {feature_obj}")
-    print(f"Filename: {filename}") 
+    # print(f"Features: {feature_obj}")
+    # print(f"Filename: {filename}") 
     
     reader = NaiveTruthReader(feature_maker=feature_obj, labelfile='123')
 
@@ -89,6 +89,9 @@ def probability_dictionary(probabilities, label_map):
 # filename = "/eagle/Xtract/cdiac/cdiac.ornl.gov/pub8old/pub8/CdiacBundles/33GC/CO2_readme.doc"
 # filename = "/eagle/Xtract/cdiac/cdiac.ornl.gov/pub8old/pub8/CdiacBundles/33GC/33GC20100914.tsv"
 # filename = "/eagle/Xtract/cdiac/cdiac.ornl.gov/pub8old/pub8/oceans/Benjamin/For_Stew/CdiacBundles/33WA/WS1305-1_readme.xml"
+
+
+"""
 filename = "/eagle/Xtract/cdiac/cdiac.ornl.gov/pub8old/pub8/Hydrochem_data/in2016_v02Hydro012.nc"
 
 trained_classifier = "stored_models/trained_classifiers/rf/rf-head-512-cdiac_EAGLE.csv-2021-12-23-23:01:06.pkl"
@@ -98,7 +101,7 @@ with open(trained_classifier, 'rb') as f:
     model = pkl.load(f)
 x = predict_single_file(filename, model, class_table_name, feature)
 print(x)
-
+"""
 
 def predict_directory(dir_name, trained_classifier, class_table_name, feature, head_bytes=512, rand_bytes=512):
     """
@@ -109,22 +112,40 @@ def predict_directory(dir_name, trained_classifier, class_table_name, feature, h
     :param head_bytes: (int) the number of bytes to read from header (default: 512)
     :param rand_bytes: (int) the number of bytes to read from randomly throughout file
     """
+
+    print(f"Directory name:\t{dir_name}")
+    print(f"Trained Classifier:\t{trained_classifier}")
+    print(f"Class Table:\t{class_table_name}")
+    print(f"Feature:\t{feature}")
+
+
     file_predictions = dict()
+
+    with open(trained_classifier, 'rb') as f:
+        model = pkl.load(f)
+
 
     for subdir, dirs, files in os.walk(dir_name):
         for file_name in files:
             file_path = os.path.join(subdir, file_name)
             file_dict = dict()
-            label, probabilities, _ = predict_single_file(file_path, trained_classifier, class_table_name, feature, head_bytes, rand_bytes, should_print=False)
+            label, probabilities, _, _, _ = predict_single_file(file_path, model, class_table_name, feature, head_bytes, rand_bytes, should_print=False)
             file_dict['label'] = label
             file_dict['probabilities'] = probabilities
             file_predictions[file_path] = file_dict
 
-    
-    json.dump(file_predictions,open(dir_name + '_probability_predictions.json', 'w+'), indent=4)
+    json.dump(file_predictions, open(dir_name + '_probability_predictions.json', 'w+'), indent=4)
     return file_predictions
 
 """
+tc = "stored_models/trained_classifiers/rf/rf-head-512-cdiac_EAGLE.csv-2021-12-23-23:01:06.pkl"
+class_table_name = "stored_models/class_tables/rf/CLASS_TABLE-rf-head-512-cdiac_EAGLE.csv-2021-12-23-23:01:06.json"
+
+predict_directory(dir_name="/home/tskluzac/XtractPredictor", trained_classifier=tc, class_table_name=class_table_name, feature='head')
+"""
+
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run file classification experiments')
     parser.add_argument("--dir_name", type=str, help="Directory to make predictions one")
@@ -137,9 +158,6 @@ if __name__ == '__main__':
                         default=0)
 
     args = parser.parse_args()
-
-    model = pickle.load(open(args.trained_classifier, "rb"))
-
-    file_predictions = predict_directory(args.dir_name, model, args.class_table,
+    file_predictions = predict_directory(args.dir_name, args.trained_classifier, args.class_table,
                         args.feature, args.head_bytes, args.rand_bytes)
-"""
+

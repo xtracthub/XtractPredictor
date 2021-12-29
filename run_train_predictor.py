@@ -75,6 +75,8 @@ Similar to extract sampler, except we're simplifying so that it only trains does
 '''
 def train_extract_predictor(model_param_dict, classifier,
                             feature_reader, model_name, split):
+
+    print(f"Feature reader:\t{feature_reader}") 
     if classifier not in ["svc", "logit", "rf"]:
         print("Invalid classifier option %s" % classifier)
         return

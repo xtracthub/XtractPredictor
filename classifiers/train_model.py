@@ -57,14 +57,15 @@ class ModelTrainer(object):
                 Y[i] = y
 
         # model_name = "{}-{}-{}.pkl".format(classifier, feature, timestamp)
+        print(f"Train: Class table path: {class_table_path}")
         with open(class_table_path, 'w') as class_table:
             json.dump(reader.feature.class_table, class_table)
 
     def train(self):
         """Trains the model."""
         if self.classifier_type == "svc":
-            self.model = SVC(kernel=self.params['kernel'], C=self.params['C'],
-                             max_iter=self.params['iter'], degree=self.params['degree'])
+            self.model = SVC(kernel=self.params['kernel'], C=self.params['C'], # TODO: TYLER -- added probability=True here to fix issue in prediction. 
+                             max_iter=self.params['iter'], degree=self.params['degree'], probability=True)
         elif self.classifier_type == "logit":
             self.model = LogisticRegression(penalty=self.params['penalty'], solver=self.params['solver'],
                                              C=self.params['C'], max_iter=self.params['iter'], n_jobs=-1)
