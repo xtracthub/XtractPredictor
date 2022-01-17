@@ -1,6 +1,10 @@
 
 from sklearn.metrics import precision_score, recall_score, plot_confusion_matrix
 from sklearn.metrics import roc_curve, auc, precision_recall_curve
+
+from sklearn.metrics import RocCurveDisplay
+
+from sklearn.preprocessing import label_binarize
 from sklearn.multiclass import OneVsRestClassifier
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -44,29 +48,39 @@ def score_model(model, X_test, Y_test, class_table):
     print(f"Model accuracy: {accuracy}")
 
     # UNCOMMENT TO PRODUCE CONFUSION MATRIX
-    ''' 
+    
     disp = plot_confusion_matrix(model, X_test, Y_test,
                             display_labels=list(class_table.keys()),
                             cmap=plt.cm.Blues,
                             normalize=None)
-    disp.ax_.set_title('SVC Confusion Matrix')
-    plt.savefig('SVC Confusion Matrix No Normalize.png', format='png')
-    '''
-
-    # UNCOMMENT TO MAKE ROC CURVE
-
+    disp.ax_.set_title('RF Confusion Matrix')
+    plt.savefig('RF Confusion Matrix No Normalize.png', format='png')
     
-    #plot_multiclass_roc(model, X_test, Y_test, n_classes=6, figsize=(16, 10))
+    # UNCOMMENT TO MAKE ROC CURVE
+    print("Plotting multi-class ROC...")
+    plot_multiclass_roc(model, X_test, Y_test, n_classes=11, figsize=(16, 10))
+    # rfc_disp = RocCurveDisplay.from_estimator(model, X_test, Y_test)
+    print("IN THEORY IT IS HERE")
+
+
 
 
     #UNCOMMENT TO MAKE Precision Recall CURVE
-    
-    #plot_pr_curve(model, X_test, Y_test, 6) 
+    print("Plotting PR Curve...")
+    plot_pr_curve(model, X_test, Y_test, 11) 
 
     return accuracy, avg_prec_score_overall, avg_recall_score_overall
 
 def plot_multiclass_roc(clf, x_test, y_test, n_classes, figsize=(17, 6)):
-    y_score = clf.decision_function(x_test)
+   # SEE FOLLOWING LINK FOR ROC CURVE ON RANDOM FOREST
+   # https://laurenliz22.github.io/roc_curve_multiclass_predictions_random_forest_classifier
+    
+    # y_score = clf.decision_function(x_test) # TYLER: UNCOMMENT THIS. 
+    y_score = clf.predict_proba(x_test)
+
+    y_test_bin = label_binarize(y_test, classes=range(1,11))
+
+    n_classes = y_test_bin.shape[1]
 
     # structures
     fpr = dict()
@@ -79,21 +93,22 @@ def plot_multiclass_roc(clf, x_test, y_test, n_classes, figsize=(17, 6)):
         fpr[i], tpr[i], _ = roc_curve(y_test_dummies[:, i], y_score[:, i])
         roc_auc[i] = auc(fpr[i], tpr[i])
 
+    print(f"ROC AUC: {roc_auc}")
     # roc for each class
     fig, ax = plt.subplots(figsize=figsize)
     ax.plot([0, 1], [0, 1], 'k--')
     ax.set_xlim([0.0, 1.0])
     ax.set_ylim([0.0, 1.05])
-    ax.set_xlabel('False Positive Rate')
-    ax.set_ylabel('True Positive Rate')
-    ax.set_title('RF Receiver operating characteristic')
+    ax.set_xlabel('False Positive Fraction')
+    ax.set_ylabel('True Positive Fraction')
+    ax.set_title('RF')
     for i in range(n_classes):
         ax.plot(fpr[i], tpr[i], label='ROC curve (area = %0.2f) for label %i' % (roc_auc[i], i))
     ax.legend(loc="best")
     ax.grid(alpha=.4)
     sns.despine()
     plt.savefig('RF ROC Curve.png', format='png')
-    plt.show()
+    # plt.show()
     
 
 def plot_pr_curve(clf, x_test, y_test, n_classes):

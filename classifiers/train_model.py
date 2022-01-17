@@ -65,7 +65,7 @@ class ModelTrainer(object):
         """Trains the model."""
         if self.classifier_type == "svc":
             self.model = SVC(kernel=self.params['kernel'], C=self.params['C'], # TODO: TYLER -- added probability=True here to fix issue in prediction. 
-                             max_iter=self.params['iter'], degree=self.params['degree'], probability=True)
+                             max_iter=self.params['iter'], degree=self.params['degree'], probability=True, verbose=True)
         elif self.classifier_type == "logit":
             self.model = LogisticRegression(penalty=self.params['penalty'], solver=self.params['solver'],
                                              C=self.params['C'], max_iter=self.params['iter'], n_jobs=-1)
