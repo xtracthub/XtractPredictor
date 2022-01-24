@@ -29,6 +29,8 @@ def extract_features(feature, head_bytes, rand_bytes, label_csv):
     read_start_time = time.time()
     reader.run()
     read_time = time.time() - read_start_time
+    print(f"Read time: {read_time}")
+    
     pkl.dump(reader, open(feature_file, "wb"))
 
     outfile_name = f"stored_features/{label_csv}-{current_time}-read-info.json" 

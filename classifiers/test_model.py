@@ -10,6 +10,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 
+from random import randint
+import pickle as pkl
+
 def score_model(model, X_test, Y_test, class_table):
     """Scores the model.
 
@@ -48,26 +51,32 @@ def score_model(model, X_test, Y_test, class_table):
     print(f"Model accuracy: {accuracy}")
 
     # UNCOMMENT TO PRODUCE CONFUSION MATRIX
-    
+    """
     disp = plot_confusion_matrix(model, X_test, Y_test,
                             display_labels=list(class_table.keys()),
                             cmap=plt.cm.Blues,
                             normalize=None)
     disp.ax_.set_title('RF Confusion Matrix')
     plt.savefig('RF Confusion Matrix No Normalize.png', format='png')
-    
+    """
     # UNCOMMENT TO MAKE ROC CURVE
     print("Plotting multi-class ROC...")
-    plot_multiclass_roc(model, X_test, Y_test, n_classes=11, figsize=(16, 10))
+    # plot_multiclass_roc(model, X_test, Y_test, n_classes=11, figsize=(16, 10))
     # rfc_disp = RocCurveDisplay.from_estimator(model, X_test, Y_test)
-    print("IN THEORY IT IS HERE")
 
 
 
 
     #UNCOMMENT TO MAKE Precision Recall CURVE
     print("Plotting PR Curve...")
-    plot_pr_curve(model, X_test, Y_test, 11) 
+    # plot_pr_curve(model, X_test, Y_test, 11) 
+    
+    
+    from random import randint
+    with open(f"classifiers/stored_test_data/{randint(100000,999999)}.pkl", "wb") as f:
+        savable ={'x_test': X_test, 'y_test': Y_test}
+        pkl.dump(savable, f)
+    
 
     return accuracy, avg_prec_score_overall, avg_recall_score_overall
 

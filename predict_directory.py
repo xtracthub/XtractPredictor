@@ -18,6 +18,11 @@ def predict_single_file(filename, trained_classifier, class_table_name, feature,
     feature (str): Type of feature that trained_classifier was trained on.
     """
 
+    """
+    with open(trained_classifier, 'rb') as f:
+        trained_classifier = pkl.load(f)
+    """
+
     start_extract_time = time.time()
     if should_print:
         print(f"Filename: {filename}")
@@ -124,15 +129,19 @@ def predict_directory(dir_name, trained_classifier, class_table_name, feature, h
     with open(trained_classifier, 'rb') as f:
         model = pkl.load(f)
 
-
+    num_predicted = 0
     for subdir, dirs, files in os.walk(dir_name):
         for file_name in files:
             file_path = os.path.join(subdir, file_name)
             file_dict = dict()
             label, probabilities, _, _, _ = predict_single_file(file_path, model, class_table_name, feature, head_bytes, rand_bytes, should_print=False)
+            num_predicted += 1
             file_dict['label'] = label
             file_dict['probabilities'] = probabilities
             file_predictions[file_path] = file_dict
+
+            if num_predicted % 1000 == 0 or num_predicted < 10:
+                print(num_predicted)
 
     json.dump(file_predictions, open(dir_name + '_probability_predictions.json', 'w+'), indent=4)
     return file_predictions
@@ -158,6 +167,11 @@ if __name__ == '__main__':
                         default=0)
 
     args = parser.parse_args()
+    
     file_predictions = predict_directory(args.dir_name, args.trained_classifier, args.class_table,
                         args.feature, args.head_bytes, args.rand_bytes)
 
+    """
+    file_prediction = predict_single_file(args.dir_name, args.trained_classifier, args.class_table, args.feature, args.head_bytes, args.rand_bytes)
+    print(file_prediction)
+    """

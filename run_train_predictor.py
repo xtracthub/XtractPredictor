@@ -51,6 +51,7 @@ def experiment(reader, classifier_name, split, model_name, model_param_dict):
                             classifier.Y_test, classifier.class_table)
 
     classifier_time = time.time() - classifier_start
+    print(f"Classifier train time: {classifier_time}") 
 
     outfile_name = "{path}-info-{size}.json".format(path=os.path.splitext(model_name)[0], 
                     size=str(reader.get_feature_maker().get_number_of_features())+'Bytes')

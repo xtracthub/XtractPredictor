@@ -47,7 +47,7 @@ class HeadBytes(FeatureMaker):
         """
         # a feature is a row with data on its file name, byte features, and label
         # entry[2] represents the entry with the byte features        
-
+    
         x = [int.from_bytes(c, byteorder=sys.byteorder) for c in entry[2]]
 
         # y is the label for this vector of features 
