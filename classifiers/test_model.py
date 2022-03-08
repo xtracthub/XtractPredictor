@@ -1,12 +1,15 @@
 
 from sklearn.metrics import precision_score, recall_score, plot_confusion_matrix
 from sklearn.metrics import roc_curve, auc, precision_recall_curve
+from sklearn.metrics import accuracy_score, hamming_loss, multilabel_confusion_matrix, roc_auc_score
+from sklearn.metrics import coverage_error, label_ranking_average_precision_score, label_ranking_loss, ndcg_score
 from sklearn.multiclass import OneVsRestClassifier
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 
-def score_model(model, X_test, Y_test, class_table):
+
+def score_model(model, X_test, Y_test, class_table, multilabel):
     """Scores the model.
 
     Parameters:
@@ -19,29 +22,80 @@ def score_model(model, X_test, Y_test, class_table):
     (float): The percentage of files from X_test that model was able to
     correctly classify.
     """
-
-
     y_pred = model.predict(X_test)
+
+    run_roc_auc = False
+    if multilabel:
+        run_roc_auc = True
+        for i in range(len(y_pred[0])):
+            if all(row[i] == 0 for row in y_pred):
+                print(f"Label {i} was never predicted, roc_auc_score will not be used as an accuracy test.")
+                run_roc_auc = False
+
     avg_prec_score_micro = precision_score(y_pred, Y_test, average='micro')
     avg_prec_score_macro = precision_score(y_pred, Y_test, average='macro')
     avg_prec_score_weighted = precision_score(y_pred, Y_test, average='weighted')
-    avg_prec_score_overall = (avg_prec_score_micro + avg_prec_score_macro + avg_prec_score_weighted) / 3
-
-    print(f"Model precision (micro): {avg_prec_score_micro}")
-    print(f"Model precision (macro): {avg_prec_score_macro}")
-    print(f"Model precision (weighted): {avg_prec_score_weighted}")
 
     avg_recall_score_micro = recall_score(y_pred, Y_test, average='micro')
     avg_recall_score_macro = recall_score(y_pred, Y_test, average='macro')
     avg_recall_score_weighted = recall_score(y_pred, Y_test, average='weighted')
-    avg_recall_score_overall = (avg_recall_score_micro + avg_recall_score_macro + avg_recall_score_weighted ) / 3
+
+    if multilabel:
+        avg_prec_score_samples = precision_score(y_pred, Y_test, average='samples')
+        avg_recall_score_samples = recall_score(y_pred, Y_test, average='samples')
+
+        avg_prec_score_overall = (avg_prec_score_micro + avg_prec_score_macro
+                                  + avg_prec_score_weighted + avg_prec_score_samples) / 4
+        avg_recall_score_overall = (avg_recall_score_micro + avg_recall_score_macro
+                                    + avg_recall_score_weighted + avg_recall_score_samples) / 4
+
+        ml_accuracy_score = accuracy_score(y_pred, Y_test)
+        ml_hamming_gain = 1-hamming_loss(y_pred, Y_test)
+        if run_roc_auc: ml_roc_auc_score = roc_auc_score(y_pred, Y_test)
+        print(f"Model accuracy (accuracy_score): {ml_accuracy_score}")
+        print(f"Model accuracy (1-hamming loss): {ml_hamming_gain}")
+        if run_roc_auc: print(f"Model accuracy (ROC AUC): {ml_roc_auc_score}")
+        # UNCOMMENT TO MAKE MULTILABEL CONFUSION MATRIX
+        # ml_multilabel_confusion_matrix = multilabel_confusion_matrix(y_pred, Y_test)
+        # print(f'multilabel_confusion_matrix: {ml_multilabel_confusion_matrix}')
+
+        if run_roc_auc:
+            accuracy = (ml_accuracy_score + ml_hamming_gain + ml_roc_auc_score) / 3
+        else:
+            accuracy = (ml_accuracy_score + ml_hamming_gain) / 2
+
+        ml_coverage_error = coverage_error(y_pred, Y_test)
+        ml_label_ranking_average_precision_score = label_ranking_average_precision_score(y_pred, Y_test)
+        ml_label_ranking_loss = label_ranking_loss(y_pred, Y_test)
+        ml_ndcg_score = ndcg_score(y_pred, Y_test)
+
+        print("---MULTILABEL RANKING METRICS---")
+        print(f"Coverage error: {ml_coverage_error}")
+        print(f"Label ranking average precision: {ml_label_ranking_average_precision_score}")
+        print(f"Ranking loss: {ml_label_ranking_loss}")
+        print(f"Normalized Discounted Cumulative Gain: {ml_ndcg_score}")
+        print("---------------------------------")
+
+    else:
+        avg_prec_score_overall = (avg_prec_score_micro + avg_prec_score_macro + avg_prec_score_weighted) / 3
+        avg_recall_score_overall = (avg_recall_score_micro + avg_recall_score_macro + avg_recall_score_weighted) / 3
+
+        accuracy = model.score(X_test, Y_test)
+
+        print(f"Model accuracy: {accuracy}")
+
+    print(f"Model precision (micro): {avg_prec_score_micro}")
+    print(f"Model precision (macro): {avg_prec_score_macro}")
+    print(f"Model precision (weighted): {avg_prec_score_weighted}")
+    if multilabel: print(f"Model precision (samples): {avg_prec_score_samples}")
 
     print(f"Model recall (micro): {avg_recall_score_micro}")
     print(f"Model recall (macro): {avg_recall_score_macro}")
     print(f"Model recall (weighted): {avg_recall_score_weighted}")
+    if multilabel: print(f"Model recall (samples): {avg_recall_score_samples}")
 
-    accuracy = model.score(X_test, Y_test)
-    print(f"Model accuracy: {accuracy}")
+    f1_score = 2*avg_prec_score_overall*avg_recall_score_overall/(avg_prec_score_overall+avg_recall_score_overall)
+    print(f"F1-score: {f1_score}")
 
     # UNCOMMENT TO PRODUCE CONFUSION MATRIX
     ''' 

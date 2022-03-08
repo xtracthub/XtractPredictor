@@ -5,19 +5,14 @@ import pickle as pkl
 import json
 import os
 
-from features.headbytes import HeadBytes
-from features.NaiveTruthReader import NaiveTruthReader
 from classifiers.train_model import ModelTrainer
 from classifiers.test_model import score_model
-from features.randbytes import RandBytes
-from features.randhead import RandHead
-# from automated_training import write_naive_truth
-# from cloud_automated_training import write_naive_truth
 
 # Global current time for saving models, class-tables, and training info.
-current_time = datetime.datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
+current_time = datetime.datetime.now().strftime("%Y-%m-%d-%H.%M.%S")
 
-def experiment(reader, classifier_name, split, model_name, model_param_dict):
+
+def experiment(reader, classifier_name, split, model_name, model_param_dict, multilabel):
     """Trains classifier_name on features from files in reader trials number
     of times and saves the model and returns training and testing data.
 
@@ -40,7 +35,7 @@ def experiment(reader, classifier_name, split, model_name, model_param_dict):
 
     class_table_path = f"stored_models/class_tables/{classifier_name}/CLASS_TABLE-{classifier_name}-{reader.name}-{current_time}.json"
 
-    classifier = ModelTrainer(reader, model_param_dict, class_table_path, classifier=classifier_name, split=split)
+    classifier = ModelTrainer(reader, model_param_dict, class_table_path, multilabel, classifier=classifier_name, split=split)
 
     classifier_start = time.time()
     print("training")
@@ -48,34 +43,41 @@ def experiment(reader, classifier_name, split, model_name, model_param_dict):
     print("done training")
 
     accuracy, prec, recall = score_model(classifier.model, classifier.X_test,
-                            classifier.Y_test, classifier.class_table)
+                                         classifier.Y_test, classifier.class_table,
+                                         multilabel)
 
     classifier_time = time.time() - classifier_start
 
-    outfile_name = "{path}-info-{size}.json".format(path=os.path.splitext(model_name)[0], 
-                    size=str(reader.get_feature_maker().get_number_of_features())+'Bytes')
+    outfile_name = "{path}-info-{size}.json".format(path=os.path.splitext(model_name)[0],
+                                                    size=str(reader.get_feature_maker().get_number_of_features())
+                                                         + 'Bytes')
 
     with open(model_name, "wb") as model_file:
-        pkl.dump(classifier.model, model_file)
+        pkl.dump(classifier, model_file)
     with open(outfile_name, "a") as data_file:
         output_data = {"Classifier": classifier_name,
-                        "Dataset Trained On": reader.name,
-                        "Train and test time": classifier_time,
-                        "Model accuracy": accuracy,
-                        "Model precision": prec,
-                        "Model recall": recall,
-                        "Model size": os.path.getsize(model_name),
-                        "Parameters": classifier.model.get_params()}
+                       "Dataset Trained On": reader.name,
+                       "Train and test time": classifier_time,
+                       "Model accuracy": accuracy,
+                       "Model precision": prec,
+                       "Model recall": recall,
+                       "Model size": os.path.getsize(model_name),
+                       "Parameters": classifier.model.get_params(),
+                       "Run as multilabel?": multilabel}
+        if classifier_name == "e_etc":
+            output_data["Bootstrap?"] = model_param_dict["bootstrap"]
         json.dump(output_data, data_file, indent=4)
 
-    return classifier.model
+    return classifier, outfile_name
+
 
 '''
 Similar to extract sampler, except we're simplifying so that it only trains doesn't predict
 '''
-def train_extract_predictor(model_param_dict, classifier,
-                            feature_reader, model_name, split):
-    if classifier not in ["svc", "logit", "rf"]:
+
+
+def train_extract_predictor(model_param_dict, classifier, model_name, split, multilabel):
+    if classifier not in ["svc", "logit", "rf", "dtc", "e_etc", "mlpc", "rccv", "t_etc", "knc", "rc", "rnc"]:
         print("Invalid classifier option %s" % classifier)
         return
     try:
@@ -84,8 +86,9 @@ def train_extract_predictor(model_param_dict, classifier,
         print("ERROR: Feature reader file has not been specified/does not exist. Stopping.")
         return
 
-    model = experiment(reader, classifier, split, model_name, model_param_dict)
-    return model
+    model, outfile_name = experiment(reader, classifier, split, model_name, model_param_dict, multilabel)
+    return model, outfile_name
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run file classification experiments')
@@ -98,18 +101,35 @@ if __name__ == '__main__':
     parser.add_argument("--feature_reader", type=str, help="Path to Reader object that extracted directory's features",
                         default="")
 
-    parser.add_argument("--C", type=float, help="regularization parameter that is only useful in Logit and SVC", default=1)
+    parser.add_argument("--C", type=float,
+                        help="regularization parameter that is only useful in Logit and SVC", default=1)
     parser.add_argument("--kernel", type=str, help="Specified SVC Kernel (Ignored for others)", default='rbf')
-    parser.add_argument("--iter", type=int, help="number of max iterations until it stops (relevant for SVC and Logit only)", default=-1)
-    parser.add_argument("--degree", type=int, help="polynomial degree only for SVC when you specify poly kernel", default=3)
+    parser.add_argument("--iter", type=int,
+                        help="number of max iterations until it stops (relevant for SVC and Logit only)", default=-1)
+    parser.add_argument("--degree", type=int,
+                        help="polynomial degree only for SVC when you specify poly kernel", default=3)
 
-    parser.add_argument("--penalty", type=str, help="sklearn Logistic Regression penalty function (ignored for SVC and RF)", default='l2')
-    parser.add_argument("--solver", type=str, help="sklearn Logistic Regression solver (ignored for SVC and RF)", default='lbfgs')
+    parser.add_argument("--penalty", type=str,
+                        help="sklearn Logistic Regression penalty function (ignored for SVC and RF)", default='l2')
+    parser.add_argument("--solver", type=str,
+                        help="sklearn Logistic Regression solver (ignored for SVC and RF)", default='lbfgs')
 
-    parser.add_argument("--n_estimators", type=int, help="sklearn Random Forest number of estimators (ignored in SVC and Logit)", default=30)
-    parser.add_argument("--criterion", type=str, help="sklearn Random Forest criterion (ignored in SVC and Logit)", default='gini')
-    parser.add_argument("--max_depth", type=int, help="sklearn Random Forest max_depth (ignored in SVC and Logit)", default=4000)
-    parser.add_argument("--min_sample_split", type=int, help="sklearn Random Forest min_sample_split (ignored in SVC and Logit)", default=30)
+    parser.add_argument("--n_estimators", type=int,
+                        help="sklearn Random Forest number of estimators (ignored in SVC and Logit)", default=30)
+    parser.add_argument("--criterion", type=str,
+                        help="sklearn Random Forest criterion (ignored in SVC and Logit)", default='gini')
+    parser.add_argument("--max_depth", type=int,
+                        help="sklearn Random Forest max_depth (ignored in SVC and Logit)", default=4000)
+    parser.add_argument("--min_sample_split", type=int,
+                        help="sklearn Random Forest min_sample_split (ignored in SVC and Logit)", default=30)
+
+    parser.add_argument("--algorithm", type=str,
+                        help="sklearn Radius Neighbors Classifier neighbor computation algorithm", default="auto")
+    parser.add_argument("--leaf_size", type=int,
+                        help="sklearn Radius Neighbors Classifier arg passed to certain algorithms", default=30)
+
+    parser.add_argument("--multilabel", dest="multilabel", action="store_true", default=False)
+    parser.add_argument("--bootstrap", dest="bootstrap", action="store_true", default=False)
 
     args = parser.parse_args()
 
@@ -124,6 +144,10 @@ if __name__ == '__main__':
     model_param_dict["criterion"] = args.criterion
     model_param_dict["max_depth"] = args.max_depth
     model_param_dict["min_sample_split"] = args.min_sample_split
+    model_param_dict["bootstrap"] = args.bootstrap
+    model_param_dict["algorithm"] = args.algorithm
+    model_param_dict["leaf_size"] = args.leaf_size
 
-    train_extract_predictor(classifier=args.classifier, model_name=args.model_name, 
-        split=args.split, model_param_dict=model_param_dict, feature_reader=args.feature_reader)
+    model, outfile_name = train_extract_predictor(classifier=args.classifier, model_name=args.model_name,
+                                                  split=args.split, model_param_dict=model_param_dict,
+                                                  multilabel=args.multilabel)
