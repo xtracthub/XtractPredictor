@@ -134,11 +134,13 @@ class ModelTrainer(object):
         elif self.classifier_type == "dtc":
             self.model = DecisionTreeClassifier(criterion=self.params['criterion'],
                                                 max_depth=self.params['max_depth'],
-                                                min_samples_split=self.params['min_sample_split'])
+                                                min_samples_split=self.params['min_sample_split'],
+                                                splitter=self.params['splitter'])
         elif self.classifier_type == "t_etc":  # TREE: EXTRA TREE CLASSIFIER
             self.model = ExtraTreeClassifier(criterion=self.params['criterion'],
                                              max_depth=self.params['max_depth'],
-                                             min_samples_split=self.params['min_sample_split'])
+                                             min_samples_split=self.params['min_sample_split'],
+                                             splitter=self.params['splitter'])
         elif self.classifier_type == "e_etc":  # ENSEMBLE: EXTRA TREES CLASSIFIER
             self.model = ExtraTreesClassifier(n_estimators=self.params['n_estimators'],
                                               criterion=self.params['criterion'],

@@ -123,6 +123,9 @@ if __name__ == '__main__':
     parser.add_argument("--min_sample_split", type=int,
                         help="sklearn Random Forest min_sample_split (ignored in SVC and Logit)", default=30)
 
+    parser.add_argument("--splitter", type=str,
+                        help="Decision tree node splitting strategy", default="best")
+
     parser.add_argument("--algorithm", type=str,
                         help="sklearn Radius Neighbors Classifier neighbor computation algorithm", default="auto")
     parser.add_argument("--leaf_size", type=int,
@@ -147,6 +150,7 @@ if __name__ == '__main__':
     model_param_dict["bootstrap"] = args.bootstrap
     model_param_dict["algorithm"] = args.algorithm
     model_param_dict["leaf_size"] = args.leaf_size
+    model_param_dict["splitter"] = args.splitter
 
     model, outfile_name = train_extract_predictor(classifier=args.classifier, model_name=args.model_name,
                                                   split=args.split, model_param_dict=model_param_dict,
