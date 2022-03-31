@@ -12,6 +12,7 @@ from features.randhead import RandHead
 # Global current time for labeling feature outfiles
 current_time = datetime.datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
 
+
 def extract_features(feature, head_bytes, rand_bytes, label_csv):
     if feature == "head":
         features = HeadBytes(head_size=head_bytes)
@@ -30,8 +31,8 @@ def extract_features(feature, head_bytes, rand_bytes, label_csv):
     reader.run()
     read_time = time.time() - read_start_time
     pkl.dump(reader, open(feature_file, "wb"))
+    outfile_name = f"stored_features/{label_csv}-{current_time}-read-info.json"
 
-    outfile_name = f"stored_features/{label_csv}-{current_time}-read-info.json" 
     with open(outfile_name, "a") as data_file:
         output_data = {"Feature": feature,
                         "HeadBytes": head_bytes,
@@ -40,6 +41,7 @@ def extract_features(feature, head_bytes, rand_bytes, label_csv):
         json.dump(output_data, data_file, indent=4)
 
     return reader
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Extract bytes (features) from files')
@@ -59,5 +61,5 @@ if __name__ == '__main__':
         print("ERROR: No label csv specified")
         exit()
         
-    reader = extract_features(feature=args.feature, head_bytes=args.head_bytes, 
-								rand_bytes=args.rand_bytes, label_csv=args.label_csv) 
+    reader = extract_features(feature=args.feature, head_bytes=args.head_bytes,
+                              rand_bytes=args.rand_bytes, label_csv=args.label_csv)
