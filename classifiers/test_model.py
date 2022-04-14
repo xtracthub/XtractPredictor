@@ -41,40 +41,45 @@ def score_model(model, X_test, Y_test, class_table, multilabel):
     avg_recall_score_weighted = recall_score(y_pred, Y_test, average='weighted')
 
     if multilabel:
-        avg_prec_score_samples = precision_score(y_pred, Y_test, average='samples')
-        avg_recall_score_samples = recall_score(y_pred, Y_test, average='samples')
 
-        avg_prec_score_overall = (avg_prec_score_micro + avg_prec_score_macro
-                                  + avg_prec_score_weighted + avg_prec_score_samples) / 4
-        avg_recall_score_overall = (avg_recall_score_micro + avg_recall_score_macro
-                                    + avg_recall_score_weighted + avg_recall_score_samples) / 4
+        avg_prec_score_overall = precision_score(y_pred, Y_test, average='samples')
+        avg_recall_score_overall = recall_score(y_pred, Y_test, average='samples')
 
         ml_accuracy_score = accuracy_score(y_pred, Y_test)
-        ml_hamming_gain = 1-hamming_loss(y_pred, Y_test)
-        if run_roc_auc: ml_roc_auc_score = roc_auc_score(y_pred, Y_test)
-        print(f"Model accuracy (accuracy_score): {ml_accuracy_score}")
-        print(f"Model accuracy (1-hamming loss): {ml_hamming_gain}")
-        if run_roc_auc: print(f"Model accuracy (ROC AUC): {ml_roc_auc_score}")
+        print(f"\nModel accuracy (accuracy_score): {ml_accuracy_score}")
+
+        if run_roc_auc:
+            ml_roc_auc_score = roc_auc_score(y_pred, Y_test)
+            print(f"Model accuracy (ROC AUC): {ml_roc_auc_score}")
+            # accuracy = (ml_accuracy_score + ml_roc_auc_score) / 2
+        # else:
+        #     accuracy = ml_accuracy_score
+
+        accuracy = ml_accuracy_score
+
+        # UNCOMMENT TO INCLUDE HAMMING LOSS AS A METRIC
+        # ml_hamming_gain = 1-hamming_loss(y_pred, Y_test)
+        # print(f"Model accuracy (1-hamming loss): {ml_hamming_gain}")
+
         # UNCOMMENT TO MAKE MULTILABEL CONFUSION MATRIX
         # ml_multilabel_confusion_matrix = multilabel_confusion_matrix(y_pred, Y_test)
         # print(f'multilabel_confusion_matrix: {ml_multilabel_confusion_matrix}')
-
-        if run_roc_auc:
-            accuracy = (ml_accuracy_score + ml_hamming_gain + ml_roc_auc_score) / 3
-        else:
-            accuracy = (ml_accuracy_score + ml_hamming_gain) / 2
 
         ml_coverage_error = coverage_error(y_pred, Y_test)
         ml_label_ranking_average_precision_score = label_ranking_average_precision_score(y_pred, Y_test)
         ml_label_ranking_loss = label_ranking_loss(y_pred, Y_test)
         ml_ndcg_score = ndcg_score(y_pred, Y_test)
 
-        print("---MULTILABEL RANKING METRICS---")
+        print(f"Model precision (samples): {avg_prec_score_overall}")
+
+        print(f"Model recall (samples): {avg_recall_score_overall}")
+
+        print("\n---MULTILABEL RANKING METRICS---")
         print(f"Coverage error: {ml_coverage_error}")
         print(f"Label ranking average precision: {ml_label_ranking_average_precision_score}")
         print(f"Ranking loss: {ml_label_ranking_loss}")
         print(f"Normalized Discounted Cumulative Gain: {ml_ndcg_score}")
-        print("---------------------------------")
+        print("---------------------------------\n")
 
     else:
         avg_prec_score_overall = (avg_prec_score_micro + avg_prec_score_macro + avg_prec_score_weighted) / 3
@@ -82,20 +87,18 @@ def score_model(model, X_test, Y_test, class_table, multilabel):
 
         accuracy = model.score(X_test, Y_test)
 
-        print(f"Model accuracy: {accuracy}")
+        print(f"\nModel accuracy: {accuracy}")
 
-    print(f"Model precision (micro): {avg_prec_score_micro}")
-    print(f"Model precision (macro): {avg_prec_score_macro}")
-    print(f"Model precision (weighted): {avg_prec_score_weighted}")
-    if multilabel: print(f"Model precision (samples): {avg_prec_score_samples}")
+        print(f"Model precision (micro): {avg_prec_score_micro}")
+        print(f"Model precision (macro): {avg_prec_score_macro}")
+        print(f"Model precision (weighted): {avg_prec_score_weighted}")
 
-    print(f"Model recall (micro): {avg_recall_score_micro}")
-    print(f"Model recall (macro): {avg_recall_score_macro}")
-    print(f"Model recall (weighted): {avg_recall_score_weighted}")
-    if multilabel: print(f"Model recall (samples): {avg_recall_score_samples}")
+        print(f"Model recall (micro): {avg_recall_score_micro}")
+        print(f"Model recall (macro): {avg_recall_score_macro}")
+        print(f"Model recall (weighted): {avg_recall_score_weighted}")
 
     f1_score = 2*avg_prec_score_overall*avg_recall_score_overall/(avg_prec_score_overall+avg_recall_score_overall)
-    print(f"F1-score: {f1_score}")
+    print(f"F1-score: {f1_score}\n")
 
     # UNCOMMENT TO PRODUCE CONFUSION MATRIX
     ''' 
@@ -108,16 +111,13 @@ def score_model(model, X_test, Y_test, class_table, multilabel):
     '''
 
     # UNCOMMENT TO MAKE ROC CURVE
+    # plot_multiclass_roc(model, X_test, Y_test, n_classes=6, figsize=(16, 10))
 
-    
-    #plot_multiclass_roc(model, X_test, Y_test, n_classes=6, figsize=(16, 10))
-
-
-    #UNCOMMENT TO MAKE Precision Recall CURVE
-    
-    #plot_pr_curve(model, X_test, Y_test, 6) 
+    # UNCOMMENT TO MAKE PRECISION-RECALL CURVE
+    # plot_pr_curve(model, X_test, Y_test, 6) 
 
     return accuracy, avg_prec_score_overall, avg_recall_score_overall
+
 
 def plot_multiclass_roc(clf, x_test, y_test, n_classes, figsize=(17, 6)):
     y_score = clf.decision_function(x_test)
@@ -151,19 +151,18 @@ def plot_multiclass_roc(clf, x_test, y_test, n_classes, figsize=(17, 6)):
     
 
 def plot_pr_curve(clf, x_test, y_test, n_classes):
-    y_score = clf.predict_proba(x_test) # for rf make this predict_proba
+    y_score = clf.predict_proba(x_test)
 
     # precision recall curve
     precision = dict()
     recall = dict()
-
 
     # calculate dummies once
     y_test_dummies = pd.get_dummies(y_test, drop_first=False).values
 
     for i in range(n_classes):
         precision[i], recall[i], _ = precision_recall_curve(y_test_dummies[:, i],
-                                                        y_score[:, i])
+                                                            y_score[:, i])
         plt.plot(recall[i], precision[i], lw=2, label='class {}'.format(i))
     
     plt.xlabel("recall")
