@@ -42,9 +42,10 @@ def experiment(reader, classifier_name, split, model_name, model_param_dict, mul
     classifier.train()
     print("done training")
 
-    accuracy, prec, recall = score_model(classifier.model, classifier.X_test,
-                                         classifier.Y_test, classifier.class_table,
-                                         multilabel)
+    accuracy, prec, recall,\
+        f1_score, ml_metrics = score_model(classifier.model, classifier.X_test,
+                                           classifier.Y_test, classifier.class_table,
+                                           multilabel)
 
     classifier_time = time.time() - classifier_start
 
@@ -61,11 +62,18 @@ def experiment(reader, classifier_name, split, model_name, model_param_dict, mul
                        "Model accuracy": accuracy,
                        "Model precision": prec,
                        "Model recall": recall,
+                       "F1-score": f1_score,
                        "Model size": os.path.getsize(model_name),
                        "Parameters": classifier.model.get_params(),
                        "Run as multilabel?": multilabel}
         if classifier_name == "e_etc":
             output_data["Bootstrap?"] = model_param_dict["bootstrap"]
+        if multilabel:
+            output_data["Coverage error"] = ml_metrics["Coverage error"]
+            output_data["Label ranking average precision score"] = ml_metrics["Label ranking average precision score"]
+            output_data["Label ranking loss"] = ml_metrics["Label ranking loss"]
+            output_data["Normalized discounted cumulative gain score"] \
+                = ml_metrics["Normalized discounted cumulative gain score"]
         json.dump(output_data, data_file, indent=4)
 
     return classifier, outfile_name

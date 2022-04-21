@@ -40,6 +40,8 @@ def score_model(model, X_test, Y_test, class_table, multilabel):
     avg_recall_score_macro = recall_score(y_pred, Y_test, average='macro')
     avg_recall_score_weighted = recall_score(y_pred, Y_test, average='weighted')
 
+    ml_metrics = dict()
+
     if multilabel:
 
         avg_prec_score_overall = precision_score(y_pred, Y_test, average='samples')
@@ -69,6 +71,11 @@ def score_model(model, X_test, Y_test, class_table, multilabel):
         ml_label_ranking_average_precision_score = label_ranking_average_precision_score(y_pred, Y_test)
         ml_label_ranking_loss = label_ranking_loss(y_pred, Y_test)
         ml_ndcg_score = ndcg_score(y_pred, Y_test)
+
+        ml_metrics["Coverage error"] = ml_coverage_error
+        ml_metrics["Label ranking average precision score"] = ml_label_ranking_average_precision_score
+        ml_metrics["Label ranking loss"] = ml_label_ranking_loss
+        ml_metrics["Normalized discounted cumulative gain score"] = ml_ndcg_score
 
         print(f"Model precision (samples): {avg_prec_score_overall}")
 
@@ -116,7 +123,7 @@ def score_model(model, X_test, Y_test, class_table, multilabel):
     # UNCOMMENT TO MAKE PRECISION-RECALL CURVE
     # plot_pr_curve(model, X_test, Y_test, 6) 
 
-    return accuracy, avg_prec_score_overall, avg_recall_score_overall
+    return accuracy, avg_prec_score_overall, avg_recall_score_overall, f1_score, ml_metrics
 
 
 def plot_multiclass_roc(clf, x_test, y_test, n_classes, figsize=(17, 6)):
