@@ -65,7 +65,8 @@ def experiment(reader, classifier_name, split, model_name, model_param_dict, mul
                        "F1-score": f1_score,
                        "Model size": os.path.getsize(model_name),
                        "Parameters": classifier.model.get_params(),
-                       "Run as multilabel?": multilabel}
+                       "Run as multilabel?": multilabel,
+                       "Split (fraction of data used for training)": split}
         if classifier_name == "e_etc":
             output_data["Bootstrap?"] = model_param_dict["bootstrap"]
         if multilabel:
